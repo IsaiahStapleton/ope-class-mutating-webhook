@@ -1,0 +1,31 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: assign-class-label-webhook
+  labels:
+    app: assign-class-label
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: assign-class-label
+  template:
+    metadata:
+      labels:
+        app: assign-class-label
+    spec:
+      containers:
+        - name: assign-class-label
+          image: quay.io/rh-ee-istaplet/ope-webhooks:assign-class-label-webhook
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 443
+          volumeMounts:
+            - name: cert
+              mountPath: /certs
+              readOnly: true
+      serviceAccountName: webhook-sa
+      volumes:
+        - name: cert
+          secret:
+            secretName: webhook-cert

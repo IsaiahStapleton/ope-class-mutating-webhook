@@ -1,0 +1,4 @@
+flask
+kubernetes
+openshift
+gunicorn
