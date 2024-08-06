@@ -23,4 +23,3 @@ webhooks:
           - ope-test
   sideEffects: None
   admissionReviewVersions: ["v1"] 
-  

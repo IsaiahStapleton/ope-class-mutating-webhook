@@ -1,6 +1,7 @@
 import logging
 import json
 import base64
+import os
 from flask import Flask, request, jsonify
 from kubernetes import config, client
 from openshift.dynamic import DynamicClient
@@ -52,15 +53,21 @@ def assign_class_label(pod, groups):
 
 @webhook.route('/mutate', methods=['POST'])
 def mutate_pod():
+    # Grab pod for mutation 
     request_info = request.get_json()
     uid = request_info["request"]["uid"]
     pod = request_info["request"]["object"]
 
-    groups = ["cs210", "cs506", "ee440"]
+    groups = os.environ.get("GROUPS").split(",")
 
+    if not groups:
+        LOG.error("GROUPS environment variables are required.")
+        exit(1)
+
+    # Grab class that the pod user belongs to
     class_label = assign_class_label(pod, groups)
 
-    # If no class label is assigned, return without modifications
+    # If user not in any class, return without modifications
     if not class_label:
         return jsonify({
             "apiVersion": "admission.k8s.io/v1",
@@ -79,9 +86,11 @@ def mutate_pod():
         "value": class_label
     }]
 
+    # Encode patch as base64 for response
     patch_base64 = base64.b64encode(json.dumps(patch).encode('utf-8')).decode('utf-8')
 
-    response = {
+    # Return webhook response that includes the patch to add class label
+    return jsonify({
         "apiVersion": "admission.k8s.io/v1",
         "kind": "AdmissionReview",
         "response": {
@@ -90,9 +99,7 @@ def mutate_pod():
             "patchType": "JSONPatch",
             "patch": patch_base64
         }
-    }
-
-    return jsonify(response)
+    })
 
 if __name__ == "__main__":
     logging.basicConfig(level="INFO")
